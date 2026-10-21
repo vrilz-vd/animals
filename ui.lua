@@ -12017,7 +12017,14 @@ FarmSec:Toggle({
     Flag = "AutoSteal",
     Default = false,
     Callback = function(v)
-        if _G.VRILZ_Features and _G.VRILZ_Features.setAutoSteal then _G.VRILZ_Features.setAutoSteal(v) end
+        -- Guard: pastiin features ready & value boolean
+        if type(v) ~= "boolean" then return end
+        if _G.VRILZ_Features and _G.VRILZ_Features.setAutoSteal then
+            _G.VRILZ_Features.setAutoSteal(v)
+        else
+            -- features belum load, queue
+            _G.VRILZ_PendingAutoSteal = v
+        end
     end,
 })
 
