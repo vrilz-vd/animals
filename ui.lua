@@ -12001,27 +12001,20 @@ Library.Sections.StatCard = function(self, Data)
 end
 
 -- ============================================================
--- UI CLIMB FOR ANIMAL
+-- UI CLIMB FOR ANIMAL (FILTER & AUTO RETURN)
 -- ============================================================
 local Window = Library:Window({
     Name = "VRILZHUB",
     SubName = "Climb For Animal",
 })
 
+-- TAB FARM
 local FarmPage = Window:Page({ Name = "Farm", Icon = "zap" })
-local FarmSec = FarmPage:Section({ Name = "Auto Farm", Side = 1 })
+local FarmSec = FarmPage:Section({ Name = "Auto Steal", Side = 1 })
 
+-- Toggle Auto Steal
 FarmSec:Toggle({
-    Name = "Auto Hatch",
-    Flag = "AutoHatch",
-    Default = false,
-    Callback = function(v)
-        if _G.VRILZ_Features and _G.VRILZ_Features.setAutoHatch then _G.VRILZ_Features.setAutoHatch(v) end
-    end,
-})
-
-FarmSec:Toggle({
-    Name = "Auto Steal",
+    Name = "Auto Steal Egg",
     Flag = "AutoSteal",
     Default = false,
     Callback = function(v)
@@ -12029,6 +12022,60 @@ FarmSec:Toggle({
     end,
 })
 
+-- Dropdown Filter Area
+FarmSec:Dropdown({
+    Name = "Filter Area",
+    Flag = "StealArea",
+    Items = {
+        "All", "Forest", "Jungle", "Desert", "Ocean", "Winter", 
+        "Crystal Mines", "PreHistoric", "Mystic Isles", "Divine Heights", 
+        "Celestial", "Realm of Legends", "Ocean Abyss"
+    },
+    Default = "All",
+    Callback = function(v)
+        if _G.VRILZ_Features and _G.VRILZ_Features.setAutoStealFilters then
+            local rarity = Library.Flags["StealRarity"] or "All"
+            _G.VRILZ_Features.setAutoStealFilters(v, rarity)
+        end
+    end,
+})
+
+-- Dropdown Filter Rarity
+FarmSec:Dropdown({
+    Name = "Filter Rarity",
+    Flag = "StealRarity",
+    Items = { "All", "Common", "Rare", "Epic", "Legendary", "Mythic", "Divine" },
+    Default = "All",
+    Callback = function(v)
+        if _G.VRILZ_Features and _G.VRILZ_Features.setAutoStealFilters then
+            local area = Library.Flags["StealArea"] or "All"
+            _G.VRILZ_Features.setAutoStealFilters(area, v)
+        end
+    end,
+})
+
+-- Toggle Auto Return
+FarmSec:Toggle({
+    Name = "Auto Return to Base",
+    Flag = "AutoReturn",
+    Default = true,
+    Callback = function(v)
+        if _G.VRILZ_Shared then _G.VRILZ_Shared.AutoReturn_Enabled = v end
+    end,
+})
+
+-- AUTO HATCH
+local HatchSec = FarmPage:Section({ Name = "Auto Hatch", Side = 2 })
+HatchSec:Toggle({
+    Name = "Auto Hatch Egg",
+    Flag = "AutoHatch",
+    Default = false,
+    Callback = function(v)
+        if _G.VRILZ_Features and _G.VRILZ_Features.setAutoHatch then _G.VRILZ_Features.setAutoHatch(v) end
+    end,
+})
+
+-- TAB MISC (Speed)
 local MiscPage = Window:Page({ Name = "Misc", Icon = "settings" })
 local MiscSec = MiscPage:Section({ Name = "Player", Side = 1 })
 
@@ -12039,11 +12086,10 @@ MiscSec:Slider({
     Max = 300,
     Default = 16,
     Callback = function(v)
-        local char = game.Players.LocalPlayer.Character
-        if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = v end
+        if _G.VRILZ_Features and _G.VRILZ_Features.setSpeedValue then _G.VRILZ_Features.setSpeedValue(v) end
+        if _G.VRILZ_Features and _G.VRILZ_Features.setSpeed then _G.VRILZ_Features.setSpeed(true) end
     end,
 })
--- ============================================================
 
 getgenv().Library = Library
 return Library
