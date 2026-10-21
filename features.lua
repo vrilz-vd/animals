@@ -1,29 +1,35 @@
 -- ============================================================
--- VRILZHUB FEATURES — CLIMB FOR ANIMAL (FIXED MULTI FILTER)
+-- VRILZHUB FEATURES — CLIMB FOR ANIMAL (FIXED)
 -- ============================================================
 
 local Features = {}
 local Shared = _G.VRILZ_Shared or {}
 
+-- Set Default biar gak error pas UI load
+if not Shared.StealAreaFilter then Shared.StealAreaFilter = { ["All"] = true } end
+if not Shared.StealRarityFilter then Shared.StealRarityFilter = { ["All"] = true } end
+
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
--- ⭐ HELPER: Cek apakah egg ini diizinkan (Multi Filter)
+-- Cek Filter (Multi)
 local function isEggAllowed(biomeName, eggName)
     local areaFilter = Shared.StealAreaFilter or {}
     local rarityFilter = Shared.StealRarityFilter or {}
     
-    -- Cek Area (Kalau kosong atau ada "All", berarti semua area)
+    -- Cek Area
     local matchArea = false
-    if next(areaFilter) == nil or areaFilter["All"] then
+    if areaFilter["All"] then
         matchArea = true
     else
-        if areaFilter[biomeName] then matchArea = true end
+        for area, isSelected in pairs(areaFilter) do
+            if isSelected and area == biomeName then matchArea = true break end
+        end
     end
     if not matchArea then return false end
     
-    -- Cek Rarity (Kalau kosong atau ada "All", berarti semua rarity)
+    -- Cek Rarity
     local EggRarity = {
         ["Gold Fish"] = "Common", ["Chicken"] = "Common", ["Hamster"] = "Common",
         ["Frog"] = "Rare", ["Cat"] = "Rare", ["Pigeon"] = "Rare", ["Ostrich"] = "Rare",
@@ -35,59 +41,46 @@ local function isEggAllowed(biomeName, eggName)
     local rarity = EggRarity[eggName] or "Common"
     
     local matchRarity = false
-    if next(rarityFilter) == nil or rarityFilter["All"] then
+    if rarityFilter["All"] then
         matchRarity = true
     else
-        if rarityFilter[rarity] then matchRarity = true end
+        for r, isSelected in pairs(rarityFilter) do
+            if isSelected and r == rarity then matchRarity = true break end
+        end
     end
     
     return matchRarity
 end
 
--- ⭐ HELPER: Balik ke Base (Ambil dari SpawnEggs di Island)
+-- Return ke Base (Pake SpawnEggs pertama di Islands)
 local function returnToBase()
     local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myRoot then return false end
     
-    -- Karena Base gak ketemu di recon, kita balik ke SpawnEggs area pertama
     local islands = Workspace:FindFirstChild("Structures") and Workspace.Structures:FindFirstChild("Islands")
     local targetPart
     if islands then
         for _, island in ipairs(islands:GetChildren()) do
             local spawn = island:FindFirstChild("SpawnEggs")
-            if spawn and spawn:IsA("BasePart") then
-                targetPart = spawn
-                break
-            end
+            if spawn and spawn:IsA("BasePart") then targetPart = spawn; break end
         end
     end
     
     if not targetPart then return false end
     
-    -- TP step by step (aman)
-    local target = targetPart.Position + Vector3.new(0, 5, 0)
-    local start = myRoot.Position
-    local dist = (target - start).Magnitude
-    local steps = math.ceil(dist / 100)
-    local dir = (target - start).Unit
-    
-    for i = 1, steps do
-        local r = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-        if not r then return false end
-        r.CFrame = CFrame.new(start + dir * math.min(100 * i, dist))
-        task.wait(0.05)
-    end
-    task.wait(0.3)
+    myRoot.CFrame = CFrame.new(targetPart.Position + Vector3.new(0, 5, 0))
+    myRoot.Velocity = Vector3.zero
+    task.wait(0.5)
     return true
 end
 
 -- ============================================================
--- AUTO STEAL (FIXED TP + MULTI FILTER)
+-- AUTO STEAL
 -- ============================================================
 local AutoStealState = { Enabled = false, Status = "Idle" }
 
-function Features.setAutoSteal(v)
-    AutoStealState.Enabled = v
+function Features.setAutoSteal(v) 
+    AutoStealState.Enabled = v 
     AutoStealState.Status = v and "Active" or "Idle"
 end
 function Features.getAutoStealState() return AutoStealState end
@@ -106,16 +99,12 @@ task.spawn(function()
         local targetEgg, targetPart, targetPrompt
         local closestDist = math.huge
         
-        -- Cari egg yang paling deket & sesuai filter
         for _, biome in ipairs(spawned:GetChildren()) do
             for _, egg in ipairs(biome:GetChildren()) do
                 if egg:IsA("Model") and egg.Name ~= "Nest" then
-                    
-                    -- ⭐ Cek Multi-Filter
                     if isEggAllowed(biome.Name, egg.Name) then
                         local part = egg:FindFirstChildWhichIsA("BasePart", true)
-                        local prompt = egg:FindFirstChildWhichIsA("ProximityPrompt", true) -- Ambil prompt apapun
-                        
+                        local prompt = egg:FindFirstChildWhichIsA("ProximityPrompt", true)
                         if part and prompt then
                             local d = (part.Position - hrp.Position).Magnitude
                             if d < closestDist then
@@ -131,11 +120,8 @@ task.spawn(function()
         end
         
         if targetEgg and targetPart and targetPrompt then
-            AutoStealState.Status = "TP ke: " .. targetEgg.Name
-            
-            -- ⭐ FIX TP: Langsung ke posisi egg
+            AutoStealState.Status = "TP: " .. targetEgg.Name
             hrp.CFrame = CFrame.new(targetPart.Position + Vector3.new(0, 3, 0))
-            hrp.Velocity = Vector3.zero
             task.wait(0.15)
             
             targetPrompt.HoldDuration = 0
@@ -150,41 +136,17 @@ task.spawn(function()
             
             AutoStealState.Status = "✅ Stolen: " .. targetEgg.Name
             
-            -- ⭐ AUTO RETURN
             if Shared.AutoReturn_Enabled then
-                AutoStealState.Status = "🏠 Returning to Base..."
+                AutoStealState.Status = "🏠 Return ke Base..."
                 returnToBase()
             end
             task.wait(0.5)
         else
-            AutoStealState.Status = "Menunggu egg spawn..."
-        end
-    end
-end)
-
--- (FITUR LAIN SEPERTI SPEED & HATCH TETAP SAMA)
-local SpeedState = { Enabled = false, Value = 100 }
-function Features.setSpeed(v) SpeedState.Enabled = v end
-function Features.setSpeedValue(v)
-    SpeedState.Value = v
-    if SpeedState.Enabled then
-        local char = LocalPlayer.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        if hum then hum.WalkSpeed = v end
-    end
-end
-function Features.getSpeedState() return SpeedState end
-
-task.spawn(function()
-    while task.wait(0.3) do
-        if SpeedState.Enabled then
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildOfClass("Humanoid")
-            if hum and hum.WalkSpeed ~= SpeedState.Value then hum.WalkSpeed = SpeedState.Value end
+            AutoStealState.Status = "Mencari egg..."
         end
     end
 end)
 
 _G.VRILZ_Features = Features
 _G.VRILZ_Shared = Shared
-print("[VRILZHUB] Features Loaded (Fixed)")
+print("[VRILZHUB] Features Fixed & Ready")
