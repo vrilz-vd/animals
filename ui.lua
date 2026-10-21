@@ -12034,9 +12034,11 @@ FarmSec:Dropdown({
     Flag = "StealArea",
     Multi = true,
     Items = {
-        "All", "Forest", "Jungle", "Desert", "Ocean", "Winter",
-        "Crystal Mines", "PreHistoric", "Mystic Isles", "Divine Heights",
-        "Celestial", "Realm of Legends", "Ocean Abyss"
+    "All", "Forest", "Jungle", "Desert", "Ocean", "Winter",
+    "Crystal Mines", "PreHistoric", "Mystic Isles", "Divine Heights",
+    "Celestial", "Realm of Legends", "Ocean Abyss", "Forbidden Forest"
+},
+
     },
     Default = {"All"},
     Callback = function(v)
@@ -12053,7 +12055,7 @@ FarmSec:Dropdown({
     Name = "Filter Rarity",
     Flag = "StealRarity",
     Multi = true,
-    Items = { "All", "Common", "Rare", "Epic", "Legendary", "Mythic", "Divine" },
+    Items = { "All", "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic", "Celestial", "Astral", "Radiant", "Eternal" },
     Default = {"All"},
     Callback = function(v)
         local S = _G.VRILZ_Shared
