@@ -12001,14 +12001,13 @@ Library.Sections.StatCard = function(self, Data)
 end
 
 -- ============================================================
--- UI CLIMB FOR ANIMAL (FILTER & AUTO RETURN)
+-- UI CLIMB FOR ANIMAL (MULTI FILTER)
 -- ============================================================
 local Window = Library:Window({
     Name = "VRILZHUB",
     SubName = "Climb For Animal",
 })
 
--- TAB FARM
 local FarmPage = Window:Page({ Name = "Farm", Icon = "zap" })
 local FarmSec = FarmPage:Section({ Name = "Auto Steal", Side = 1 })
 
@@ -12022,34 +12021,38 @@ FarmSec:Toggle({
     end,
 })
 
--- Dropdown Filter Area
+-- ⭐ MULTI DROPDOWN AREA
 FarmSec:Dropdown({
     Name = "Filter Area",
     Flag = "StealArea",
+    Multi = true, -- Bisa pilih banyak
     Items = {
         "All", "Forest", "Jungle", "Desert", "Ocean", "Winter", 
         "Crystal Mines", "PreHistoric", "Mystic Isles", "Divine Heights", 
         "Celestial", "Realm of Legends", "Ocean Abyss"
     },
-    Default = "All",
+    Default = {"All"},
     Callback = function(v)
-        if _G.VRILZ_Features and _G.VRILZ_Features.setAutoStealFilters then
-            local rarity = Library.Flags["StealRarity"] or "All"
-            _G.VRILZ_Features.setAutoStealFilters(v, rarity)
+        if _G.VRILZ_Shared then
+            local newFilter = {}
+            for _, areaName in ipairs(v) do newFilter[areaName] = true end
+            _G.VRILZ_Shared.StealAreaFilter = newFilter
         end
     end,
 })
 
--- Dropdown Filter Rarity
+-- ⭐ MULTI DROPDOWN RARITY
 FarmSec:Dropdown({
     Name = "Filter Rarity",
     Flag = "StealRarity",
+    Multi = true, -- Bisa pilih banyak
     Items = { "All", "Common", "Rare", "Epic", "Legendary", "Mythic", "Divine" },
-    Default = "All",
+    Default = {"All"},
     Callback = function(v)
-        if _G.VRILZ_Features and _G.VRILZ_Features.setAutoStealFilters then
-            local area = Library.Flags["StealArea"] or "All"
-            _G.VRILZ_Features.setAutoStealFilters(area, v)
+        if _G.VRILZ_Shared then
+            local newFilter = {}
+            for _, rarityName in ipairs(v) do newFilter[rarityName] = true end
+            _G.VRILZ_Shared.StealRarityFilter = newFilter
         end
     end,
 })
@@ -12064,18 +12067,7 @@ FarmSec:Toggle({
     end,
 })
 
--- AUTO HATCH
-local HatchSec = FarmPage:Section({ Name = "Auto Hatch", Side = 2 })
-HatchSec:Toggle({
-    Name = "Auto Hatch Egg",
-    Flag = "AutoHatch",
-    Default = false,
-    Callback = function(v)
-        if _G.VRILZ_Features and _G.VRILZ_Features.setAutoHatch then _G.VRILZ_Features.setAutoHatch(v) end
-    end,
-})
-
--- TAB MISC (Speed)
+-- TAB MISC
 local MiscPage = Window:Page({ Name = "Misc", Icon = "settings" })
 local MiscSec = MiscPage:Section({ Name = "Player", Side = 1 })
 
