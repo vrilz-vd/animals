@@ -1,11 +1,11 @@
 -- ============================================================
 -- VRILZHUB FEATURES — CLIMB FOR ANIMAL (AUTO CLIMB + STEAL)
--- FULL FIXED VERSION
+-- RARITY ASLI DARI GAME
 -- ============================================================
 
 local Features = {}
 local Shared = _G.VRILZ_Shared or {}
-_G.VRILZ_Shared = Shared  -- ✅ selalu expose reference yang sama
+_G.VRILZ_Shared = Shared
 
 if not Shared.StealAreaFilter then Shared.StealAreaFilter = { ["All"] = true } end
 if not Shared.StealRarityFilter then Shared.StealRarityFilter = { ["All"] = true } end
@@ -16,47 +16,103 @@ local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 
 -- ═══════════════════════════════════════════════════════════
--- 1. HELPER FILTER (MULTI)
+-- EGG RARITY — dari game asli (EggStats.Rarity TextLabel)
 -- ═══════════════════════════════════════════════════════════
 local EggRarity = {
-    ["Gold Fish"] = "Common", ["Chicken"] = "Common", ["Hamster"] = "Common",
-    ["Frog"] = "Rare", ["Cat"] = "Rare", ["Pigeon"] = "Rare", ["Ostrich"] = "Rare",
-    ["Crocodile"] = "Epic", ["Bear"] = "Epic", ["Crab"] = "Epic", ["Koala"] = "Epic",
-    ["T-Rex"] = "Legendary", ["Dragon"] = "Legendary", ["Pegasus"] = "Legendary", ["Unicorn"] = "Legendary",
-    ["Hydra"] = "Mythic", ["Griffin"] = "Mythic", ["Kraken"] = "Mythic",
-    ["Simurgh"] = "Divine", ["YI QI"] = "Divine"
+    -- Common
+    ["Frog"] = "Common", ["Coral Goby"] = "Common", ["Gold Fish"] = "Common",
+    ["Goat"] = "Common", ["Lizard"] = "Common", ["Trumpet"] = "Common",
+    ["Crab"] = "Common", ["Microraptor"] = "Common", ["Chicken"] = "Common",
+    ["Hamster"] = "Common",
+    -- Uncommon
+    ["Surgeonfish"] = "Uncommon", ["Butter Fly Fish"] = "Uncommon",
+    ["Angel Fish"] = "Uncommon", ["Triceratops"] = "Uncommon",
+    ["Tuna"] = "Uncommon", ["Garuda"] = "Uncommon",
+    ["Golden Retriver"] = "Uncommon", ["Bat"] = "Uncommon",
+    -- Rare
+    ["Turtle"] = "Rare", ["Box Fish"] = "Rare", ["Pony"] = "Rare",
+    ["Kangaroo"] = "Rare", ["Simurgh"] = "Rare", ["Cat"] = "Rare",
+    -- Epic
+    ["Bear"] = "Epic",
+    -- Legendary
+    ["Capybara"] = "Legendary", ["T-Rex"] = "Legendary", ["Sphinx"] = "Legendary",
+    -- Mythic
+    ["Crocodile"] = "Mythic", ["Velicoraptor"] = "Mythic",
+    -- Celestial
+    ["Fire Phoenix"] = "Celestial",
+    -- Astral
+    ["Werewolf"] = "Astral", ["Lion Dragon"] = "Astral", ["Minotaur"] = "Astral",
+    -- Radiant
+    ["Giant Bat"] = "Radiant", ["Spider"] = "Radiant", ["Gargoyle Bat"] = "Radiant",
+    -- Eternal
+    ["Kitsune"] = "Eternal", ["Griffin"] = "Eternal", ["Red Dragon"] = "Eternal",
+    ["Hydra"] = "Eternal", ["Pegasus"] = "Eternal",
 }
 
-local function isEggAllowed(biomeName, eggName)
-    local areaFilter = Shared.StealAreaFilter or {}
-    local rarityFilter = Shared.StealRarityFilter or {}
-
-    local matchArea = areaFilter["All"] == true
-    if not matchArea then
-        for area, isSelected in pairs(areaFilter) do
-            if isSelected and area == biomeName then
-                matchArea = true
-                break
+-- Baca rarity dari TextLabel di egg (paling akurat)
+local function getEggRarityFromModel(eggModel, eggName)
+    -- Coba baca dari EggStats.Rarity TextLabel
+    for _, desc in ipairs(eggModel:GetDescendants()) do
+        if desc:IsA("TextLabel") and desc.Name == "Rarity" then
+            local text = desc.Text
+            if text and text ~= "" then
+                return text
             end
         end
     end
-    if not matchArea then return false end
-
-    local rarity = EggRarity[eggName] or "Common"
-    local matchRarity = rarityFilter["All"] == true
-    if not matchRarity then
-        for r, isSelected in pairs(rarityFilter) do
-            if isSelected and r == rarity then
-                matchRarity = true
-                break
-            end
-        end
-    end
-    return matchRarity
+    -- Fallback ke table
+    return EggRarity[eggName] or "Common"
 end
 
 -- ═══════════════════════════════════════════════════════════
--- 2. HELPER RETURN TO BASE
+-- FILTER CHECK
+-- ═══════════════════════════════════════════════════════════
+local function isEggAllowed(biomeName, eggName, eggModel)
+    local areaFilter = Shared.StealAreaFilter or {}
+    local rarityFilter = Shared.StealRarityFilter or {}
+
+    local biomeLower = string.lower(tostring(biomeName))
+    local eggLower = string.lower(tostring(eggName))
+
+    -- Area check
+    local matchArea = areaFilter["All"] == true
+    if not matchArea then
+        for area, isSelected in pairs(areaFilter) do
+            if isSelected then
+                local areaLower = string.lower(tostring(area))
+                if biomeLower == areaLower
+                   or string.find(biomeLower, areaLower, 1, true)
+                   or string.find(areaLower, biomeLower, 1, true) then
+                    matchArea = true
+                    break
+                end
+            end
+        end
+    end
+    if not matchArea then return false, "area_mismatch" end
+
+    -- Rarity check — baca dari game dulu, fallback ke table
+    local rarity = eggModel and getEggRarityFromModel(eggModel, eggName) or (EggRarity[eggName] or "Common")
+    local rarityLower = string.lower(tostring(rarity))
+    local matchRarity = rarityFilter["All"] == true
+    if not matchRarity then
+        for r, isSelected in pairs(rarityFilter) do
+            if isSelected then
+                local rLower = string.lower(tostring(r))
+                if rLower == rarityLower then
+                    matchRarity = true
+                    break
+                end
+            end
+        end
+    end
+    if not matchRarity then return false, "rarity_mismatch" end
+
+    return true, "match"
+end
+
+-- ═══════════════════════════════════════════════════════════
+-- RETURN TO BASE
 -- ═══════════════════════════════════════════════════════════
 local function returnToBase()
     local char = LocalPlayer.Character
@@ -102,7 +158,7 @@ local function returnToBase()
 end
 
 -- ═══════════════════════════════════════════════════════════
--- 3. FUNGSI AUTO CLIMB (MOVE TO TANGGA) — CACHED
+-- AUTO CLIMB
 -- ═══════════════════════════════════════════════════════════
 local cachedTrusses = {}
 local lastTrussScan = 0
@@ -156,56 +212,53 @@ local function autoClimbTo(targetY)
 end
 
 -- ═══════════════════════════════════════════════════════════
--- 4. LOGIC AUTO STEAL (CLIMB + MINGGIR + STEAL)
+-- AUTO STEAL
 -- ═══════════════════════════════════════════════════════════
 local AutoStealState = { Enabled = false, Status = "Idle" }
 
 function Features.setAutoSteal(v)
-    v = v == true  -- force boolean
+    v = v == true
     AutoStealState.Enabled = v
     AutoStealState.Status = v and "Active" or "Idle"
-    print("[VRILZ] AutoSteal:", v, "| Status:", AutoStealState.Status)
+    print("[VRILZ] setAutoSteal:", v)
 end
 
 function Features.getAutoStealState()
     return AutoStealState
 end
 
+-- Force OFF di startup
+AutoStealState.Enabled = false
+AutoStealState.Status = "Idle"
+
 task.spawn(function()
     while task.wait(0.5) do
-        if not AutoStealState.Enabled then
-            continue
-        end
+        if not AutoStealState.Enabled then continue end
 
         local spawned = Workspace:FindFirstChild("SpawnedEggs")
-        if not spawned then
-            continue
-        end
+        if not spawned then continue end
 
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then
-            continue
-        end
+        if not hrp then continue end
 
         local targetEgg, targetPart, targetPrompt
         local closestDist = math.huge
 
-        -- Cari Egg sesuai filter
         for _, biome in ipairs(spawned:GetChildren()) do
             for _, egg in ipairs(biome:GetChildren()) do
                 if egg:IsA("Model") and egg.Name ~= "Nest" then
-                    if isEggAllowed(biome.Name, egg.Name) then
-                        local part = egg:FindFirstChildWhichIsA("BasePart", true)
-                        local prompt = egg:FindFirstChildWhichIsA("ProximityPrompt", true)
-                        if part and prompt then
-                            local d = (part.Position - hrp.Position).Magnitude
-                            if d < closestDist then
-                                closestDist = d
-                                targetEgg = egg
-                                targetPart = part
-                                targetPrompt = prompt
-                            end
+                    local allowed, reason = isEggAllowed(biome.Name, egg.Name, egg)
+                    local part = egg:FindFirstChildWhichIsA("BasePart", true)
+                    local prompt = egg:FindFirstChildWhichIsA("ProximityPrompt", true)
+
+                    if allowed and part and prompt then
+                        local d = (part.Position - hrp.Position).Magnitude
+                        if d < closestDist then
+                            closestDist = d
+                            targetEgg = egg
+                            targetPart = part
+                            targetPrompt = prompt
                         end
                     end
                 end
@@ -213,14 +266,13 @@ task.spawn(function()
         end
 
         if targetEgg and targetPart and targetPrompt then
-            -- ⭐ CEK KALO EGG DI ATAS, NAIK TANGGA DULU
             if targetPart.Position.Y > hrp.Position.Y + 20 then
                 AutoStealState.Status = "🧗 Climbing ke " .. targetEgg.Name
+                print("[VRILZ]", AutoStealState.Status)
                 autoClimbTo(targetPart.Position.Y + 10)
                 task.wait(0.3)
             end
 
-            -- ⭐ TP DEKET EGG + FREEZE VELOCITY
             local r = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if r then
                 r.CFrame = CFrame.new(targetPart.Position + Vector3.new(0, 1, 2))
@@ -228,8 +280,8 @@ task.spawn(function()
                 task.wait(0.3)
             end
 
-            -- ⭐ NEMBAK PROMPT STEAL
             AutoStealState.Status = "🎯 Stealing: " .. targetEgg.Name
+            print("[VRILZ]", AutoStealState.Status)
             targetPrompt.MaxActivationDistance = 50
             targetPrompt.HoldDuration = 0
             targetPrompt.RequiresLineOfSight = false
@@ -242,16 +294,18 @@ task.spawn(function()
                 if not targetEgg.Parent then break end
             end
 
-            -- ⭐ CEK HASIL
             if not targetEgg.Parent then
                 AutoStealState.Status = "✅ Stolen: " .. targetEgg.Name
+                print("[VRILZ]", AutoStealState.Status)
 
                 if Shared.AutoReturn_Enabled then
                     AutoStealState.Status = "🏠 Return ke Base..."
+                    print("[VRILZ]", AutoStealState.Status)
                     returnToBase()
                 end
             else
                 AutoStealState.Status = "❌ Gagal Steal: " .. targetEgg.Name
+                print("[VRILZ]", AutoStealState.Status)
             end
 
             task.wait(0.5)
@@ -261,15 +315,10 @@ task.spawn(function()
     end
 end)
 
--- Force OFF di startup (biar gak ON sendiri)
-AutoStealState.Enabled = false
-AutoStealState.Status = "Idle"
-
--- Apply pending queue dari UI (kalau UI load duluan)
 if _G.VRILZ_PendingAutoSteal ~= nil then
     Features.setAutoSteal(_G.VRILZ_PendingAutoSteal)
     _G.VRILZ_PendingAutoSteal = nil
 end
 
 _G.VRILZ_Features = Features
-print("[VRILZHUB] Features Fixed & Ready")
+print("[VRILZHUB] Features loaded — AutoSteal OFF by default")
