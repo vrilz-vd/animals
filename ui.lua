@@ -12001,7 +12001,7 @@ Library.Sections.StatCard = function(self, Data)
 end
 
 -- ============================================================
--- UI CLIMB FOR ANIMAL (MULTI FILTER)
+-- UI CLIMB FOR ANIMAL (BENERIN MULTI DROPDOWN)
 -- ============================================================
 local Window = Library:Window({
     Name = "VRILZHUB",
@@ -12011,7 +12011,7 @@ local Window = Library:Window({
 local FarmPage = Window:Page({ Name = "Farm", Icon = "zap" })
 local FarmSec = FarmPage:Section({ Name = "Auto Steal", Side = 1 })
 
--- Toggle Auto Steal
+-- Toggle Auto Steal (Default = false biar mati dulu)
 FarmSec:Toggle({
     Name = "Auto Steal Egg",
     Flag = "AutoSteal",
@@ -12025,7 +12025,7 @@ FarmSec:Toggle({
 FarmSec:Dropdown({
     Name = "Filter Area",
     Flag = "StealArea",
-    Multi = true, -- Bisa pilih banyak
+    Multi = true, -- BISA PILIH BANYAK
     Items = {
         "All", "Forest", "Jungle", "Desert", "Ocean", "Winter", 
         "Crystal Mines", "PreHistoric", "Mystic Isles", "Divine Heights", 
@@ -12045,7 +12045,7 @@ FarmSec:Dropdown({
 FarmSec:Dropdown({
     Name = "Filter Rarity",
     Flag = "StealRarity",
-    Multi = true, -- Bisa pilih banyak
+    Multi = true, -- BISA PILIH BANYAK
     Items = { "All", "Common", "Rare", "Epic", "Legendary", "Mythic", "Divine" },
     Default = {"All"},
     Callback = function(v)
@@ -12057,11 +12057,11 @@ FarmSec:Dropdown({
     end,
 })
 
--- Toggle Auto Return
+-- Toggle Auto Return (Default = false biar lu bisa atur)
 FarmSec:Toggle({
     Name = "Auto Return to Base",
     Flag = "AutoReturn",
-    Default = true,
+    Default = false,
     Callback = function(v)
         if _G.VRILZ_Shared then _G.VRILZ_Shared.AutoReturn_Enabled = v end
     end,
@@ -12078,8 +12078,8 @@ MiscSec:Slider({
     Max = 300,
     Default = 16,
     Callback = function(v)
-        if _G.VRILZ_Features and _G.VRILZ_Features.setSpeedValue then _G.VRILZ_Features.setSpeedValue(v) end
-        if _G.VRILZ_Features and _G.VRILZ_Features.setSpeed then _G.VRILZ_Features.setSpeed(true) end
+        local char = game.Players.LocalPlayer.Character
+        if char and char:FindFirstChild("Humanoid") then char.Humanoid.WalkSpeed = v end
     end,
 })
 
