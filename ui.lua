@@ -12022,6 +12022,16 @@ FarmSec:Toggle({
 })
 
 -- ⭐ MULTI DROPDOWN AREA
+FarmSec:Dropdown({
+    Name = "Filter Area",
+    Flag = "StealArea",
+    Multi = true,
+    Items = {
+        "All", "Forest", "Jungle", "Desert", "Ocean", "Winter",
+        "Crystal Mines", "PreHistoric", "Mystic Isles", "Divine Heights",
+        "Celestial", "Realm of Legends", "Ocean Abyss"
+    },
+    Default = {"All"},
     Callback = function(v)
         local S = _G.VRILZ_Shared
         if not S then return end
@@ -12029,8 +12039,15 @@ FarmSec:Toggle({
         for k in pairs(S.StealAreaFilter) do S.StealAreaFilter[k] = nil end
         for _, areaName in ipairs(v) do S.StealAreaFilter[areaName] = true end
     end,
+})
 
 -- ⭐ MULTI DROPDOWN RARITY
+FarmSec:Dropdown({
+    Name = "Filter Rarity",
+    Flag = "StealRarity",
+    Multi = true,
+    Items = { "All", "Common", "Rare", "Epic", "Legendary", "Mythic", "Divine" },
+    Default = {"All"},
     Callback = function(v)
         local S = _G.VRILZ_Shared
         if not S then return end
@@ -12038,6 +12055,7 @@ FarmSec:Toggle({
         for k in pairs(S.StealRarityFilter) do S.StealRarityFilter[k] = nil end
         for _, rarityName in ipairs(v) do S.StealRarityFilter[rarityName] = true end
     end,
+})
 
 -- Toggle Auto Return (Default = false biar lu bisa atur)
 FarmSec:Toggle({
