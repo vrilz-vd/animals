@@ -12034,11 +12034,9 @@ FarmSec:Dropdown({
     Flag = "StealArea",
     Multi = true,
     Items = {
-    "All", "Forest", "Jungle", "Desert", "Ocean", "Winter",
-    "Crystal Mines", "PreHistoric", "Mystic Isles", "Divine Heights",
-    "Celestial", "Realm of Legends", "Ocean Abyss", "Forbidden Forest"
-},
-
+        "All", "Forest", "Jungle", "Desert", "Ocean", "Winter",
+        "Crystal Mines", "PreHistoric", "Mystic Isles", "Divine Heights",
+        "Celestial", "Realm of Legends", "Ocean Abyss", "Forbidden Forest"
     },
     Default = {"All"},
     Callback = function(v)
