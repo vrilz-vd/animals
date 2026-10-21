@@ -161,8 +161,10 @@ end
 local AutoStealState = { Enabled = false, Status = "Idle" }
 
 function Features.setAutoSteal(v)
-    AutoStealState.Enabled = v and true or false
-    AutoStealState.Status = AutoStealState.Enabled and "Active" or "Idle"
+    v = v == true  -- force boolean
+    AutoStealState.Enabled = v
+    AutoStealState.Status = v and "Active" or "Idle"
+    print("[VRILZ] AutoSteal:", v, "| Status:", AutoStealState.Status)
 end
 
 function Features.getAutoStealState()
@@ -258,6 +260,16 @@ task.spawn(function()
         end
     end
 end)
+
+-- Force OFF di startup (biar gak ON sendiri)
+AutoStealState.Enabled = false
+AutoStealState.Status = "Idle"
+
+-- Apply pending queue dari UI (kalau UI load duluan)
+if _G.VRILZ_PendingAutoSteal ~= nil then
+    Features.setAutoSteal(_G.VRILZ_PendingAutoSteal)
+    _G.VRILZ_PendingAutoSteal = nil
+end
 
 _G.VRILZ_Features = Features
 print("[VRILZHUB] Features Fixed & Ready")
