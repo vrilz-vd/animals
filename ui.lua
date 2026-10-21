@@ -12022,40 +12022,22 @@ FarmSec:Toggle({
 })
 
 -- ⭐ MULTI DROPDOWN AREA
-FarmSec:Dropdown({
-    Name = "Filter Area",
-    Flag = "StealArea",
-    Multi = true, -- BISA PILIH BANYAK
-    Items = {
-        "All", "Forest", "Jungle", "Desert", "Ocean", "Winter", 
-        "Crystal Mines", "PreHistoric", "Mystic Isles", "Divine Heights", 
-        "Celestial", "Realm of Legends", "Ocean Abyss"
-    },
-    Default = {"All"},
     Callback = function(v)
-        if _G.VRILZ_Shared then
-            local newFilter = {}
-            for _, areaName in ipairs(v) do newFilter[areaName] = true end
-            _G.VRILZ_Shared.StealAreaFilter = newFilter
-        end
+        local S = _G.VRILZ_Shared
+        if not S then return end
+        S.StealAreaFilter = S.StealAreaFilter or {}
+        for k in pairs(S.StealAreaFilter) do S.StealAreaFilter[k] = nil end
+        for _, areaName in ipairs(v) do S.StealAreaFilter[areaName] = true end
     end,
-})
 
 -- ⭐ MULTI DROPDOWN RARITY
-FarmSec:Dropdown({
-    Name = "Filter Rarity",
-    Flag = "StealRarity",
-    Multi = true, -- BISA PILIH BANYAK
-    Items = { "All", "Common", "Rare", "Epic", "Legendary", "Mythic", "Divine" },
-    Default = {"All"},
     Callback = function(v)
-        if _G.VRILZ_Shared then
-            local newFilter = {}
-            for _, rarityName in ipairs(v) do newFilter[rarityName] = true end
-            _G.VRILZ_Shared.StealRarityFilter = newFilter
-        end
+        local S = _G.VRILZ_Shared
+        if not S then return end
+        S.StealRarityFilter = S.StealRarityFilter or {}
+        for k in pairs(S.StealRarityFilter) do S.StealRarityFilter[k] = nil end
+        for _, rarityName in ipairs(v) do S.StealRarityFilter[rarityName] = true end
     end,
-})
 
 -- Toggle Auto Return (Default = false biar lu bisa atur)
 FarmSec:Toggle({
