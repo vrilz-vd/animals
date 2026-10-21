@@ -1,12 +1,15 @@
 -- ============================================================
 -- VRILZHUB FEATURES — CLIMB FOR ANIMAL (AUTO CLIMB + STEAL)
+-- FULL FIXED VERSION
 -- ============================================================
 
 local Features = {}
 local Shared = _G.VRILZ_Shared or {}
+_G.VRILZ_Shared = Shared  -- ✅ selalu expose reference yang sama
 
 if not Shared.StealAreaFilter then Shared.StealAreaFilter = { ["All"] = true } end
 if not Shared.StealRarityFilter then Shared.StealRarityFilter = { ["All"] = true } end
+if Shared.AutoReturn_Enabled == nil then Shared.AutoReturn_Enabled = false end
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -27,20 +30,26 @@ local EggRarity = {
 local function isEggAllowed(biomeName, eggName)
     local areaFilter = Shared.StealAreaFilter or {}
     local rarityFilter = Shared.StealRarityFilter or {}
-    
-    local matchArea = areaFilter["All"]
+
+    local matchArea = areaFilter["All"] == true
     if not matchArea then
         for area, isSelected in pairs(areaFilter) do
-            if isSelected and area == biomeName then matchArea = true break end
+            if isSelected and area == biomeName then
+                matchArea = true
+                break
+            end
         end
     end
     if not matchArea then return false end
-    
+
     local rarity = EggRarity[eggName] or "Common"
-    local matchRarity = rarityFilter["All"]
+    local matchRarity = rarityFilter["All"] == true
     if not matchRarity then
         for r, isSelected in pairs(rarityFilter) do
-            if isSelected and r == rarity then matchRarity = true break end
+            if isSelected and r == rarity then
+                matchRarity = true
+                break
+            end
         end
     end
     return matchRarity
@@ -50,11 +59,11 @@ end
 -- 2. HELPER RETURN TO BASE
 -- ═══════════════════════════════════════════════════════════
 local function returnToBase()
-    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    local hum = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    local char = LocalPlayer.Character
+    local myRoot = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
     if not myRoot or not hum then return false end
-    
-    -- Cari Base di Structures.Bases
+
     local structures = Workspace:FindFirstChild("Structures")
     local bases = structures and structures:FindFirstChild("Bases")
     local targetPart
@@ -64,8 +73,6 @@ local function returnToBase()
             if spawn then targetPart = spawn; break end
         end
     end
-    
-    -- Fallback: Islands
     if not targetPart then
         local islands = structures and structures:FindFirstChild("Islands")
         if islands then
@@ -75,21 +82,19 @@ local function returnToBase()
             end
         end
     end
-    
     if not targetPart then return false end
-    
-    -- TP Glide 100 studs
+
     local target = targetPart.Position + Vector3.new(0, 5, 0)
     local start = myRoot.Position
     local dist = (target - start).Magnitude
-    local steps = math.ceil(dist / 100)
+    local steps = math.max(1, math.ceil(dist / 100))
     local dir = (target - start).Unit
-    
+
     for i = 1, steps do
         local r = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
         if not r then return false end
         r.CFrame = CFrame.new(start + dir * math.min(100 * i, dist))
-        r.Velocity = Vector3.zero
+        r.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         task.wait(0.05)
     end
     task.wait(0.3)
@@ -97,45 +102,56 @@ local function returnToBase()
 end
 
 -- ═══════════════════════════════════════════════════════════
--- 3. FUNGSI AUTO CLIMB (MOVE TO TANGGA)
+-- 3. FUNGSI AUTO CLIMB (MOVE TO TANGGA) — CACHED
 -- ═══════════════════════════════════════════════════════════
+local cachedTrusses = {}
+local lastTrussScan = 0
+
+local function refreshTrussCache()
+    cachedTrusses = {}
+    for _, obj in ipairs(Workspace:GetDescendants()) do
+        if obj:IsA("TrussPart") then
+            table.insert(cachedTrusses, obj)
+        end
+    end
+    lastTrussScan = tick()
+end
+
 local function autoClimbTo(targetY)
     local char = LocalPlayer.Character
     local hrp = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildOfClass("Humanoid")
     if not hrp or not hum then return false end
-    
-    -- Cari TrussPart (Tangga) terdekat
-    local closestTruss
-    local closestDist = math.huge
-    for _, obj in ipairs(Workspace:GetDescendants()) do
-        if obj:IsA("TrussPart") then
-            local d = (obj.Position - hrp.Position).Magnitude
+
+    if tick() - lastTrussScan > 5 or #cachedTrusses == 0 then
+        refreshTrussCache()
+    end
+
+    local closestTruss, closestDist = nil, math.huge
+    for _, truss in ipairs(cachedTrusses) do
+        if truss.Parent then
+            local d = (truss.Position - hrp.Position).Magnitude
             if d < closestDist then
                 closestDist = d
-                closestTruss = obj
+                closestTruss = truss
             end
         end
     end
-    
+
     if not closestTruss then return false end
-    
-    -- Posisi di depan tangga (offset 2 studs dari hitbox)
+
     local approachPos = closestTruss.Position + (closestTruss.CFrame.LookVector * -2)
     hrp.CFrame = CFrame.new(approachPos)
     task.wait(0.5)
-    
-    -- Pake MoveTo biar server nganggep lu beneran manjat
+
     local targetPos = Vector3.new(closestTruss.Position.X, targetY, closestTruss.Position.Z)
     hum:MoveTo(targetPos)
-    
-    -- Tunggu sampe nyampe atas (max 10 detik)
+
     local startTime = tick()
     while tick() - startTime < 10 do
         if hrp.Position.Y >= targetY - 2 then break end
         task.wait(0.2)
     end
-    
     return true
 end
 
@@ -144,27 +160,36 @@ end
 -- ═══════════════════════════════════════════════════════════
 local AutoStealState = { Enabled = false, Status = "Idle" }
 
-function Features.setAutoSteal(v) 
-    AutoStealState.Enabled = v 
-    AutoStealState.Status = v and "Active" or "Idle"
+function Features.setAutoSteal(v)
+    AutoStealState.Enabled = v and true or false
+    AutoStealState.Status = AutoStealState.Enabled and "Active" or "Idle"
 end
-function Features.getAutoStealState() return AutoStealState end
+
+function Features.getAutoStealState()
+    return AutoStealState
+end
 
 task.spawn(function()
     while task.wait(0.5) do
-        if not AutoStealState.Enabled then continue end
-        
+        if not AutoStealState.Enabled then
+            continue
+        end
+
         local spawned = Workspace:FindFirstChild("SpawnedEggs")
-        if not spawned then continue end
-        
+        if not spawned then
+            continue
+        end
+
         local char = LocalPlayer.Character
         local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp then continue end
-        
+        if not hrp then
+            continue
+        end
+
         local targetEgg, targetPart, targetPrompt
         local closestDist = math.huge
-        
-        -- Cari Egg sesuai filter (Prioritas Egg di Y paling tinggi)
+
+        -- Cari Egg sesuai filter
         for _, biome in ipairs(spawned:GetChildren()) do
             for _, egg in ipairs(biome:GetChildren()) do
                 if egg:IsA("Model") and egg.Name ~= "Nest" then
@@ -173,7 +198,6 @@ task.spawn(function()
                         local prompt = egg:FindFirstChildWhichIsA("ProximityPrompt", true)
                         if part and prompt then
                             local d = (part.Position - hrp.Position).Magnitude
-                            -- Prioritaskan Y tertinggi (Area atas)
                             if d < closestDist then
                                 closestDist = d
                                 targetEgg = egg
@@ -185,7 +209,7 @@ task.spawn(function()
                 end
             end
         end
-        
+
         if targetEgg and targetPart and targetPrompt then
             -- ⭐ CEK KALO EGG DI ATAS, NAIK TANGGA DULU
             if targetPart.Position.Y > hrp.Position.Y + 20 then
@@ -193,31 +217,33 @@ task.spawn(function()
                 autoClimbTo(targetPart.Position.Y + 10)
                 task.wait(0.3)
             end
-            
-            -- ⭐ MINGGIR 2 STUDS DARI TANGGA (BIAR NEMPEL TANAH)
+
+            -- ⭐ TP DEKET EGG + FREEZE VELOCITY
             local r = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if r then
-                r.CFrame = CFrame.new(targetPart.Position + Vector3.new(0, 1, 2)) -- Offset Z = 2
-                r.Velocity = Vector3.zero
+                r.CFrame = CFrame.new(targetPart.Position + Vector3.new(0, 1, 2))
+                r.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                 task.wait(0.3)
             end
-            
+
             -- ⭐ NEMBAK PROMPT STEAL
             AutoStealState.Status = "🎯 Stealing: " .. targetEgg.Name
+            targetPrompt.MaxActivationDistance = 50
             targetPrompt.HoldDuration = 0
-            targetPrompt.MaxActivationDistance = math.huge
             targetPrompt.RequiresLineOfSight = false
-            
+
             for _ = 1, 10 do
-                if fireproximityprompt then pcall(fireproximityprompt, targetPrompt) end
+                if fireproximityprompt then
+                    pcall(fireproximityprompt, targetPrompt)
+                end
                 task.wait(0.15)
                 if not targetEgg.Parent then break end
             end
-            
+
             -- ⭐ CEK HASIL
             if not targetEgg.Parent then
                 AutoStealState.Status = "✅ Stolen: " .. targetEgg.Name
-                
+
                 if Shared.AutoReturn_Enabled then
                     AutoStealState.Status = "🏠 Return ke Base..."
                     returnToBase()
@@ -225,7 +251,7 @@ task.spawn(function()
             else
                 AutoStealState.Status = "❌ Gagal Steal: " .. targetEgg.Name
             end
-            
+
             task.wait(0.5)
         else
             AutoStealState.Status = "Mencari egg..."
@@ -234,5 +260,4 @@ task.spawn(function()
 end)
 
 _G.VRILZ_Features = Features
-_G.VRILZ_Shared = Shared
 print("[VRILZHUB] Features Fixed & Ready")
